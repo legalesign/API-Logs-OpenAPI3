@@ -17,7 +17,7 @@ tags:
   - name: Requests
     description: Details of a request
 servers:
-  - url: 'https://api-logs.legalesign.com/api/v1'
+  - url: 'https://api-logs.legalesign.com/v1'
 security:
   - OAuth2: []
 paths:
