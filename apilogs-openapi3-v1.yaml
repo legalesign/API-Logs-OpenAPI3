@@ -1,0 +1,260 @@
+openapi: 3.0.0
+info:
+  description: API for monitoring Legalesign API
+  version: "1.0.0"
+  title: Legalesign API monitoring
+  contact:
+    email: support@legalesign.com
+    name: API support
+    url: https://legalesign.com/contact/
+tags:
+  - name: webhooks
+    description: Webhook logs
+  - name: metrics
+    description: Counts of events
+  - name: events
+    description: Requests for a given time period
+  - name: Requests
+    description: Details of a request
+servers:
+  - url: 'https://api-logs.legalesign.com/api/v1'
+security:
+  - OAuth2: []
+paths:
+  /webhooks/:
+    get:
+      tags:
+        - webhooks
+      summary: Show up to last 100 webhook events
+      operationId: getWebhooks
+      responses:
+        '200':
+          description: 'successful operation, list of webhooks events'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookLogListResponse'
+        '500':
+          description: 'error in request'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: error message      
+        '401':
+          description: 'not authorized'
+  /metrics/:
+    get:
+      tags:
+        - metrics
+      summary: Show counts of requests in time slots
+      operationId: getMetrics
+      parameters:
+        - name: starttime
+          in: query
+          description: >-
+            ISO format datestring. Logs are retained for now more than 2 weeks.
+          required: true
+          schema:
+            type: string
+        - name: endtime
+          in: query
+          description: >-
+            ISO format datestring.
+          required: true
+          schema:
+            type: string
+        - name: name
+          in: query
+          description: >-
+            Type of metric to return.
+          required: false
+          schema:
+            type: string
+            enum: [Count]
+        - name: status
+          in: query
+          description: >-
+            Filter by status codes.
+          required: false
+          schema:
+            type: string
+            enum: [XXX, 4XX, 5XX]
+      responses:
+        '200':
+          description: 'succesful, return list of event counts over a time period'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricListResponse'
+        '401':
+          description: 'not authorized'
+  /events/:
+    get:
+      tags:
+      - events
+      summary: Get list of API requests and status codes over a time period
+      operationId: getEvents
+      parameters:
+        - name: starttime
+          in: query
+          description: >-
+            ISO format datestring. Logs are retained for now more than 2 weeks.
+          required: true
+          schema:
+            type: string
+        - name: endtime
+          in: query
+          description: >-
+            ISO format datestring.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'succesful, return list of requests'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventListResponse'
+        '401':
+          description: 'not authorized'
+  /requests/:
+    get:
+      tags:
+        - requests
+      summary: Get details of an individual request
+      operationId: getRequest
+      parameters:
+        - name: logstream
+          in: query
+          description: get this from the call to events
+          required: true
+          schema:
+            type: string
+        - name: requestid
+          in: query
+          description: get this from the call to events
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 'succesful, return list of requests'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestListResponse'
+        '401':
+          description: 'not authorized'
+components:
+  securitySchemes:
+    OAuth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://a.legalesign.com/oauth2/authorize
+          tokenUrl: https://a.legalesign.com/oauth2/token
+          scopes: {}
+  schemas:
+    MetricListResponse:
+      type: object
+      properties:
+        objects:
+          type: array
+          items:
+            $ref: '#/components/schemas/MetricResponse'
+    RequestListResponse:
+      type: object
+      properties:
+        objects:
+          type: array
+          items:
+            $ref: '#/components/schemas/RequestResponse'
+    EventListResponse:
+      type: object
+      properties:
+        objects:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventResponse'
+    MetricResponse:
+      type: object
+      properties:
+        Timestamp:
+          type: string
+          description: ISO formatted datestring
+        Average:
+          type: integer
+        Sum:
+          type: integer
+        Unit:
+          type: string
+          enum: ['Count']
+    WebhookLogListResponse:
+      type: object
+      properties:
+        objects:
+          type: array
+          items:
+            $ref: '#/components/schemas/WebhookLogResponse'
+    WebhookLogResponse:
+      type: object
+      properties:
+        callback_type:
+          type: string
+          enum: ['all', 'signed', 'rejected']
+        event_id:
+          type: string
+        message:
+          type: string
+        status_code:
+          type: string
+          description: Status code we received
+        timestamp:
+          type: integer
+          format: int64
+          description: Timestamp since epoch in milliseconds
+        url:
+          type: string
+          description: Your webhook url
+    EventResponse:
+      type: object
+      properties:
+        RequestId:
+          type: string
+          description: Use this and LogStream for the request details call
+        Timestamp:
+          type: integer
+          description: Milliseconds since the epoch
+        LogStream:
+          type: string
+          description: Use this and RequestId for the request details call
+        Status:
+          type: string
+          description: Status code of request
+        Latency:
+          type: string
+          description: Latency of request, not in use currently. 
+    RequestResponse:
+      type: object
+      properties:
+        logStreamName:
+          type: string
+        timestamp:
+          type: integer
+          description: Milliseconds since the epoch
+        message:
+          type: string
+          description: A log message for the request
+        integestionTime:
+          type: integer
+          description: Milliseconds since the epoch
+        eventId:
+          type: integer
+          description: A uniqueId for request
+        
